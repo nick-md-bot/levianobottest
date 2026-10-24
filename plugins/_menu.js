@@ -93,7 +93,7 @@ bot(
             : { text: menu }),
           title: "",
           subtitle: "Connect with us",
-          footer: "Open Base",
+          footer: "𝑳𝜺𝝂𝜾⃮⃯⃔𝜶𝜼𝝄♪💋🤍",
           interactiveButtons: [
             {
               name: "quick_reply",
@@ -106,14 +106,14 @@ bot(
               name: "cta_url",
               buttonParamsJson: JSON.stringify({
                 display_text: "Telegram Support",
-                url: "https://t.me/izumi_xddd",
+                url: "https://t.me/editzwitheroxe",
               }),
             },
             {
               name: "cta_url",
               buttonParamsJson: JSON.stringify({
                 display_text: "WhatsApp Channel",
-                url: "https://whatsapp.com/channel/0029Vaf2tKvGZNCmuSg8ma2O",
+                url: "https://whatsapp.com/channel/0029Vb6pwSk0wajnkUjrw904",
               }),
             },
           ],
