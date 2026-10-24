@@ -1,7 +1,28 @@
 const plugins = require("../lib/plugins");
-const { bot, isPrivate, clockString, pm2Uptime } = require("../lib");
-const { OWNER_NAME, BOT_NAME,HANDLERS } = require("../config");
-const { hostname } = require("os");
+const { bot, isPrivate } = require("../lib");
+const { OWNER_NAME, BOT_NAME, HANDLERS } = require("../config");
+
+const contextInfo = {
+  forwardingScore: 1,
+  isForwarded: true,
+  forwardedNewsletterMessageInfo: {
+    newsletterJid: "120363404471968952@newsletter",
+    newsletterName: BOT_NAME,
+    serverMessageId: -1,
+  },
+};
+
+// command name from a registered pattern (or undefined)
+const cmdName = (command) => {
+  if (!(command.pattern instanceof RegExp)) return undefined;
+  const name = command.pattern.toString().split(/\W+/)[1];
+  return name ? name.trim() : undefined;
+};
+
+const quotedOf = (message) => ({
+  key: message.key,
+  message: { conversation: message.text || message.body || "" },
+});
 
 bot(
   {
@@ -12,17 +33,7 @@ bot(
     type: "user",
   },
   async (message, match) => {
-    const handlerChar = HANDLERS.replace(/\[|\]/g, "").charAt(0); // Get - or ! or .
-
-    const contextInfo = {
-      forwardingScore: 1,
-      isForwarded: true,
-      forwardedNewsletterMessageInfo: {
-        newsletterJid: '120363404471968952@newsletter',
-        newsletterName: BOT_NAME,
-        serverMessageId: -1
-      },
-    };
+    const handlerChar = HANDLERS.replace(/\[|\]/g, "").charAt(0);
 
     if (match) {
       for (let i of plugins.commands) {
@@ -30,14 +41,16 @@ bot(
           i.pattern instanceof RegExp &&
           i.pattern.test(message.prefix + match)
         ) {
-          const cmdName = i.pattern.toString().split(/\W+/)[1];
-          return message.reply(`Command: ${message.prefix}${cmdName.trim()}\nDescription: ${i.desc}`);
+          const name = cmdName(i);
+          return message.reply(
+            `Command: ${message.prefix}${name}\nDescription: ${i.desc}`
+          );
         }
       }
     }
 
-    let { prefix } = message;
-    let [date, time] = new Date()
+    const { prefix } = message;
+    const [date, time] = new Date()
       .toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
       .split(",");
 
@@ -49,71 +62,74 @@ bot(
 ┃ ⎆  COMMANDS: ${plugins.commands.length}
 ╰━━━━━━━━━━━━\n`;
 
-    let cmnd = [];
-    let cmd;
-    let category = [];
-
-    plugins.commands.forEach((command) => {
-      if (command.pattern instanceof RegExp) {
-        cmd = command.pattern.toString().split(/\W+/)[1];
+    const cmnd = [];
+    for (const command of plugins.commands) {
+      const name = cmdName(command);
+      if (!command.dontAddCommandList && name !== undefined) {
+        cmnd.push({ cmd: name, type: (command.type || "misc").toLowerCase() });
       }
+    }
+    cmnd.sort((a, b) => a.type.localeCompare(b.type) || a.cmd.localeCompare(b.cmd));
 
-      if (!command.dontAddCommandList && cmd !== undefined) {
-        let type = command.type ? command.type.toLowerCase() : "misc";
-        cmnd.push({ cmd, type });
-        if (!category.includes(type)) category.push(type);
+    let lastType = null;
+    for (const { cmd, type } of cmnd) {
+      if (type !== lastType) {
+        menu += `\n*${type.toUpperCase()}*`;
+        lastType = type;
       }
-    });
+      menu += `\n> ${cmd}`;
+    }
 
-    cmnd.sort();
-    category.sort().forEach((cmmd) => {
-      let comad = cmnd.filter(({ type }) => type === cmmd);
-      comad.forEach(({ cmd }) => {
-        menu += `\n> ${cmd.trim()}`;
-      });
-    });
-
-    await message.client.sendMessage(
-      message.jid,
-      {
-        image: { url: 'https://cdn.ironman.my.id/i/wme7ix.jpg' },
-        caption: menu,
-        title: "",
-        subtitle: "Connect with us",
-        footer: "Open Base",
-        interactiveButtons: [
-          {
-            name: "quick_reply",
-            buttonParamsJson: JSON.stringify({
-              display_text: "𝗢𝘄𝗻𝗲𝗿",
-              id: `${handlerChar}owner`
-            }),
-          },
-          {
-            name: "cta_url",
-            buttonParamsJson: JSON.stringify({
-              display_text: "𝗧𝗲𝗹𝗲𝗴𝗿𝗮𝗺 𝗦𝘂𝗽𝗽𝗼𝗿𝘁",
-              url: "https://t.me/izumi_xddd"
-            }),
-          },
-          {
-            name: "cta_url",
-            buttonParamsJson: JSON.stringify({
-              display_text: "𝗪𝗵𝗮𝘁𝘀𝗔𝗽𝗽 𝗰𝗵𝗮𝗻𝗻𝗲𝗹",
-              url: "https://whatsapp.com/channel/0029Vaf2tKvGZNCmuSg8ma2O"
-            }),
-          }
-        ],
-        contextInfo,
-        viewOnce: true,
-        linkPreview: true // ✅ link preview enabled
-      },
-      {
-        quoted: message.data
-      }
-    );
+    const quoted = { quoted: message.data };
+    try {
+      await message.client.sendMessage(
+        message.jid,
+        {
+          image: { url: "https://cdn.ironman.my.id/i/wme7ix.jpg" },
+          caption: menu,
+          title: "",
+          subtitle: "Connect with us",
+          footer: "Open Base",
+          interactiveButtons: [
+            {
+              name: "quick_reply",
+              buttonParamsJson: JSON.stringify({
+                display_text: "Owner",
+                id: `${handlerChar}owner`,
+              }),
+            },
+            {
+              name: "cta_url",
+              buttonParamsJson: JSON.stringify({
+                display_text: "Telegram Support",
+                url: "https://t.me/izumi_xddd",
+              }),
+            },
+            {
+              name: "cta_url",
+              buttonParamsJson: JSON.stringify({
+                display_text: "WhatsApp Channel",
+                url: "https://whatsapp.com/channel/0029Vaf2tKvGZNCmuSg8ma2O",
+              }),
+            },
+          ],
+          contextInfo,
+          viewOnce: true,
+        },
+        quoted
+      );
+    } catch (e) {
+      // buttons/image failed -> plain text fallback so the menu always works
+      console.error("menu button send failed:", e.message);
+      await message.client.sendMessage(
+        message.jid,
+        { text: menu, contextInfo },
+        quoted
+      );
+    }
   }
 );
+
 bot(
   {
     pattern: "list",
@@ -122,53 +138,30 @@ bot(
     type: "user",
     dontAddCommandList: true,
   },
-  async (message, match, { prefix }) => {
-    const contextInfo = {
-      forwardingScore: 1,
-      isForwarded: true,
-      forwardedNewsletterMessageInfo: {
-        newsletterJid: '120363404471968952@newsletter',
-        newsletterName: BOT_NAME,
-        serverMessageId: -1
+  async (message) => {
+    const cmnd = [];
+    for (const command of plugins.commands) {
+      const name = cmdName(command);
+      if (!command.dontAddCommandList && name !== undefined) {
+        cmnd.push({ cmd: name, desc: command.desc || false });
       }
-    };
+    }
+    cmnd.sort((a, b) => a.cmd.localeCompare(b.cmd));
+
     let menu = "Command List\n";
-
-    let cmnd = [];
-    let cmd, desc;
-    plugins.commands.map((command) => {
-      if (command.pattern) {
-        cmd = command.pattern.toString().split(/\W+/)[1];
-      }
-      desc = command.desc || false;
-
-      if (!command.dontAddCommandList && cmd !== undefined) {
-        cmnd.push({ cmd, desc });
-      }
-    });
-    cmnd.sort();
     cmnd.forEach(({ cmd, desc }, num) => {
-      menu += `\n${num + 1}. ${cmd.trim()}\n`;
-      if (desc) menu += `Use: ${desc}`;
+      menu += `\n${num + 1}. ${cmd}\n`;
+      if (desc) menu += `Use: ${desc}\n`;
     });
-    menu += ``;
-  return await message.client.sendMessage(
+
+    return await message.client.sendMessage(
       message.jid,
-      {
-        text: menu,
-        contextInfo
-      },
-      {
-        quoted: {
-          key: message.key,
-          message: {
-            conversation: message.text || message.body || ''
-          }
-        }
-      }
-    )
+      { text: menu, contextInfo },
+      { quoted: quotedOf(message) }
+    );
   }
 );
+
 bot(
   {
     pattern: "ping",
@@ -176,51 +169,29 @@ bot(
     desc: "To check if the bot is awake",
     type: "user",
   },
-  async (message, match) => {
-    const contextInfo = {
-      forwardingScore: 1,
-      isForwarded: true,
-      forwardedNewsletterMessageInfo: {
-        newsletterJid: '120363404471968952@newsletter',
-        newsletterName: BOT_NAME,
-        serverMessageId: -1
-      }
-    };
-
+  async (message) => {
     const start = Date.now();
-
-    // Simulate some processing work
-    for (let i = 0; i < 1e6; i++) {
-      Math.sqrt(i);
-    }
-
-    const end = Date.now();
-    const speed = end - start;
+    for (let i = 0; i < 1e6; i++) Math.sqrt(i);
+    const speed = Date.now() - start;
 
     await message.client.sendMessage(
       message.jid,
-      {
-        text: `Bot speed: ${speed} ms`,
-        contextInfo
-      },
-      {
-        quoted: {
-          key: message.key,
-          message: {
-            conversation: message.text || message.body || ''
-          }
-        }
-      }
+      { text: `Bot speed: ${speed} ms`, contextInfo },
+      { quoted: quotedOf(message) }
     );
   }
 );
 
-bot({
-  pattern: 'reboot$',
-  fromMe: true,
-  desc: 'Restart the bot',
-  type: 'user'
-}, async (message, client) => {
-  await message.sendMessage(message.jid, "_rebooting_");
-  return require('pm2').restart('index.js');
-});
+bot(
+  {
+    pattern: "reboot$",
+    fromMe: true,
+    desc: "Restart the bot",
+    type: "user",
+  },
+  async (message) => {
+    await message.sendMessage(message.jid, "_rebooting_");
+    // pm2 (npm start) restarts the process automatically after exit
+    setTimeout(() => process.exit(0), 1000);
+  }
+);
