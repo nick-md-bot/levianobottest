@@ -2,6 +2,9 @@ const plugins = require("../lib/plugins");
 const { bot, isPrivate } = require("../lib");
 const { OWNER_NAME, BOT_NAME, HANDLERS } = require("../config");
 
+// optional: set MENU_IMAGE env to an image URL to show it on the menu
+const MENU_IMAGE = process.env.MENU_IMAGE || "https://xenocdn.xenocdn.workers.dev/397a6dce.jpeg";
+
 const contextInfo = {
   forwardingScore: 1,
   isForwarded: true,
@@ -85,8 +88,9 @@ bot(
       await message.client.sendMessage(
         message.jid,
         {
-          image: { url: "https://cdn.ironman.my.id/i/wme7ix.jpg" },
-          caption: menu,
+          ...(MENU_IMAGE
+            ? { image: { url: MENU_IMAGE }, caption: menu }
+            : { text: menu }),
           title: "",
           subtitle: "Connect with us",
           footer: "Open Base",
